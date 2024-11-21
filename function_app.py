@@ -1,13 +1,23 @@
 """Azure functions for truck location upload and distance calculation from warehouses"""
 from datetime import datetime
 import logging
+import json
+import os
+import math
 import azure.functions as func
 import pyodbc
 import requests
-import json
 
 # Define the Azure Function application
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
+
+def get_sql_connection_string() -> str:
+    """_summary_
+
+    Returns:
+        str: _description_
+    """
+    return os.environ["OdbcSqlConnectionString"]
 
 
 @app.route(route="uploadTruckData")
@@ -18,8 +28,8 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
     The function expects a JSON payload with the following structure:
     {
         "truck_id": 1,
-        "latitude": 51.509865,
-        "longitude": -0.118092,
+        "latitude": 53.8085097,
+        "longitude": -1.5528634,
         "timestamp": "2024-11-18T10:00:00"
     }
 
@@ -29,16 +39,7 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
     logging.info("Processing truck data upload request.")
 
     # Define the connection string for the Azure SQL Database
-    connection_string = (
-        "Driver={ODBC Driver 18 for SQL Server};"
-        "Server=distributed-systems-module-server.database.windows.net,1433;"
-        "Database=TruckWarehouseMonitor;"
-        "Uid=sc22r2s;"
-        "Pwd=Qwertyui123_;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-    )
+    connection_string = get_sql_connection_string()
 
     # Parse and validate the request body
     try:
@@ -104,13 +105,20 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
 
     finally:
         # Ensure the database connection is closed
-        if "connection" in locals() and connection:
+        if 'cursor' in locals():
+            cursor.close()
+        if "connection" in locals():
             connection.close()
 
 
 def compare_truck_warehouse_location(payload):
-    # function_url = "https://TruckMonitoringSystem.azurewebsites.net/api/compareLocations"
-    function_url = "http://localhost:7071/api/compareLocations"
+    """_summary_
+
+    Args:
+        payload (_type_): _description_
+    """
+    function_url = "https://TruckMonitoringSystem.azurewebsites.net/api/compareLocations"
+    # function_url = "http://localhost:7071/api/compareLocations"
 
     # Make the POST request
     try:
@@ -134,16 +142,7 @@ def fetch_warehouses():
         list: A list of rows, where each row is a tuple containing column values.
     """
     try:
-        connection_string = (
-        "Driver={ODBC Driver 18 for SQL Server};"
-        "Server=distributed-systems-module-server.database.windows.net,1433;"
-        "Database=TruckWarehouseMonitor;"
-        "Uid=sc22r2s;"
-        "Pwd=Qwertyui123_;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Connection Timeout=30;"
-        )
+        connection_string = get_sql_connection_string()
 
         # Connect to the database
         connection = pyodbc.connect(connection_string)
@@ -186,32 +185,76 @@ def calculate_truck_data(truckInfo: str) -> None:
     trucks = json.loads(truckInfo)
     warehouses = fetch_warehouses()
 
-    for index, truck in enumerate(trucks):
-        for warehouse in warehouses:
+    # Process only INSERT operations
+    for truck in trucks:
+        logging.info(truck.get("Operation"))
+        if truck.get("Operation") == 0:  # 0 means insert operation
+            for warehouse in warehouses:
+                warehouse_id = warehouse[0]
+                warehouse_latitude = warehouse[2]
+                warehouse_longitude = warehouse[3]
 
-            warehouse_id = warehouse[0]
-            warehouse_latitude = warehouse[2]
-            warehouse_longitude = warehouse[3]
+                payload = {
+                    "truck_id": truck["Item"]["TruckID"],
+                    "warehouse_id": warehouse_id,
+                    "truck_latitude": truck["Item"]["Latitude"],
+                    "truck_longitude": truck["Item"]["Longitude"],
+                    "warehouse_latitude": warehouse_latitude,
+                    "warehouse_longitude": warehouse_longitude
+                }
 
-            payload = {
-                "truck_id": truck["Item"]["TruckID"],
-                "warehouse_id": warehouse_id,
-                "truck_latitude": truck["Item"]["Latitude"],
-                "truck_longitude": truck["Item"]["Longitude"],
-                "warehouse_latitude": warehouse_latitude,
-                "warehouse_longitude": warehouse_longitude
-            }
-
-            compare_truck_warehouse_location(payload)
+                compare_truck_warehouse_location(payload)
 
 
-# def haversine(lat1, lon1, lat2, lon2):
-#     R = 6371  # Earth radius in kilometers
-#     dlat = math.radians(lat2 - lat1)
-#     dlon = math.radians(lon2 - lon1)
-#     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-#     return R * c
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371  # Earth radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+def insert_message_queue(truck_id, warehouse_id, distance):
+    """
+    Inserts a new record into the MessageQueue table.
+
+    Args:
+        truck_id (int): The ID of the truck.
+        warehouse_id (int): The ID of the warehouse.
+        distance (float): The distance between the truck and the warehouse.
+
+    Returns:
+        int: The QueueID of the inserted record.
+    """
+    try:
+        connection_string = get_sql_connection_string()
+        # Connect to the database
+        connection = pyodbc.connect(connection_string)
+        cursor = connection.cursor()
+
+        # Insert query
+        query = """
+        INSERT INTO MessageQueue (TruckID, WarehouseID, Distance)
+        VALUES (?, ?, ?);
+        """
+
+        # Execute the query with parameters
+        cursor.execute(query, (truck_id, warehouse_id, distance))
+
+        # Commit the transaction
+        connection.commit()
+
+    except pyodbc.Error as e:
+        print(f"Error inserting data: {e}")
+        return None
+
+    finally:
+        # Close the connection
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
 
 
 @app.route(route="compareLocations", auth_level=func.AuthLevel.ANONYMOUS)
@@ -228,7 +271,15 @@ def compareLocations(req: func.HttpRequest) -> func.HttpResponse:
         warehouse_latitude = float(req_body.get("warehouse_latitude"))
         warehouse_longitude = float(req_body.get("warehouse_longitude"))
 
-        logging.info(f"{truck_id} {warehouse_id}")
+        distance = haversine(truck_latitude,
+                             truck_longitude,
+                             warehouse_latitude,
+                             warehouse_longitude)
+
+        logging.info(f"Truck ID: {truck_id}, Warehouse ID: {warehouse_id}, Distance: {distance}")
+
+        if distance <= 0.5:
+            insert_message_queue(truck_id, warehouse_id, distance)
 
     except ValueError as e:
         # Handle invalid data formats (e.g., incorrect types or timestamp format)
