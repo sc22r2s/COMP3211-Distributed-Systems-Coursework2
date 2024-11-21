@@ -106,6 +106,26 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
         # Ensure the database connection is closed
         if "connection" in locals() and connection:
             connection.close()
+
+
+def compare_truck_warehouse_location(payload):
+    # function_url = "https://TruckMonitoringSystem.azurewebsites.net/api/compareLocations"
+    function_url = "http://localhost:7071/api/compareLocations"
+
+    # Make the POST request
+    try:
+        response = requests.post(function_url, json=payload)
+
+        # Check the response
+        if response.status_code == 200:
+            print("Response:", response.text)
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+
+    except requests.exceptions.RequestException as e:
+        print(f"An error occurred: {e}")
+
+
 def fetch_warehouses():
     """
     Fetch all rows from the Warehouses table.
@@ -182,3 +202,52 @@ def calculate_truck_data(truckInfo: str) -> None:
                 "warehouse_longitude": warehouse_longitude
             }
 
+            compare_truck_warehouse_location(payload)
+
+
+# def haversine(lat1, lon1, lat2, lon2):
+#     R = 6371  # Earth radius in kilometers
+#     dlat = math.radians(lat2 - lat1)
+#     dlon = math.radians(lon2 - lon1)
+#     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+#     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+#     return R * c
+
+
+@app.route(route="compareLocations", auth_level=func.AuthLevel.ANONYMOUS)
+def compareLocations(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info('Calculating truck and warehouse distance request.')
+
+    # Parse and validate the request body
+    try:
+        req_body = req.get_json()  # Parse JSON from the request
+        truck_id = int(req_body.get("truck_id"))
+        warehouse_id = int(req_body.get("warehouse_id"))
+        truck_latitude = float(req_body.get("truck_latitude"))
+        truck_longitude = float(req_body.get("truck_longitude"))
+        warehouse_latitude = float(req_body.get("warehouse_latitude"))
+        warehouse_longitude = float(req_body.get("warehouse_longitude"))
+
+        logging.info(f"{truck_id} {warehouse_id}")
+
+    except ValueError as e:
+        # Handle invalid data formats (e.g., incorrect types or timestamp format)
+        logging.error("Invalid data format: %s", e)
+        return func.HttpResponse(
+            "Invalid data format. Please check your input.",
+            status_code=400
+        )
+    except Exception as e:
+        # Handle any other errors during request parsing
+        logging.error("Error parsing request body: %s", e)
+        return func.HttpResponse(
+            "Invalid request body. Please provide truck_id, warehouse_id, "
+            "truck_latitude, truck_longitude, warehouse_latitude."
+            "and warehouse_longitude",
+            status_code=400
+        )
+
+    return func.HttpResponse(
+            f"Comparison for truck: {truck_id} and warehouse {warehouse_id} successful.",
+            status_code=200
+        )
