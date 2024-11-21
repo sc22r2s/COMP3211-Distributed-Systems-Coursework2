@@ -150,3 +150,35 @@ def fetch_warehouses():
         if 'connection' in locals():
             connection.close()
 
+
+@app.sql_trigger(arg_name="truckInfo",
+                 table_name="TruckLocations",
+                 connection_string_setting="SqlConnectionString")
+def calculate_truck_data(truckInfo: str) -> None:
+    """
+    Triggered when changes are detected in the TruckLocations table.
+
+    Args:
+        truckInfo (str): JSON payload containing the change details.
+    """
+    logging.info("SQL Trigger detected changes: %s", truckInfo)
+
+    trucks = json.loads(truckInfo)
+    warehouses = fetch_warehouses()
+
+    for index, truck in enumerate(trucks):
+        for warehouse in warehouses:
+
+            warehouse_id = warehouse[0]
+            warehouse_latitude = warehouse[2]
+            warehouse_longitude = warehouse[3]
+
+            payload = {
+                "truck_id": truck["Item"]["TruckID"],
+                "warehouse_id": warehouse_id,
+                "truck_latitude": truck["Item"]["Latitude"],
+                "truck_longitude": truck["Item"]["Longitude"],
+                "warehouse_latitude": warehouse_latitude,
+                "warehouse_longitude": warehouse_longitude
+            }
+
