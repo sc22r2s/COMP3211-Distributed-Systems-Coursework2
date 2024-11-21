@@ -5,22 +5,16 @@ This module implements a serverless workflow using Microsoft Azure Functions
 to manage truck location data and calculate distances to warehouses. It demonstrates
 event-driven architectures with HTTP and SQL triggers.
 
-### Workflow:
-1. **Data Upload (`upload_truck_data`)**:
+Workflow:
+1. Data Upload (upload_truck_data):
    - HTTP-triggered function to validate and store truck location data in Azure SQL.
 
-2. **Distance Calculation (`calculate_truck_data`)**:
+2. Distance Calculation (calculate_truck_data):
    - SQL-triggered function to process new truck data, compute distances to warehouses,
      and invoke further actions for close-proximity trucks.
 
-3. **Comparison (`compare_locations`)**:
+3. Comparison (compare_locations):
    - HTTP-triggered function to calculate and log truck-to-warehouse distances.
-
-### Features:
-- Serverless design using Azure Functions.
-- Integration with Azure SQL Database.
-- Distance computation with the Haversine formula.
-- Scalable, modular, and extensible design.
 """
 
 from datetime import datetime
