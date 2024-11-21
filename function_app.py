@@ -1,7 +1,10 @@
-import azure.functions as func
-import logging
-import pyodbc
+"""Azure functions for truck location upload and distance calculation from warehouses"""
 from datetime import datetime
+import logging
+import azure.functions as func
+import pyodbc
+import requests
+import json
 
 # Define the Azure Function application
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -103,3 +106,47 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
         # Ensure the database connection is closed
         if "connection" in locals() and connection:
             connection.close()
+def fetch_warehouses():
+    """
+    Fetch all rows from the Warehouses table.
+
+    Returns:
+        list: A list of rows, where each row is a tuple containing column values.
+    """
+    try:
+        connection_string = (
+        "Driver={ODBC Driver 18 for SQL Server};"
+        "Server=distributed-systems-module-server.database.windows.net,1433;"
+        "Database=TruckWarehouseMonitor;"
+        "Uid=sc22r2s;"
+        "Pwd=Qwertyui123_;"
+        "Encrypt=yes;"
+        "TrustServerCertificate=no;"
+        "Connection Timeout=30;"
+        )
+
+        # Connect to the database
+        connection = pyodbc.connect(connection_string)
+        cursor = connection.cursor()
+
+        # SQL query to fetch data from the Warehouses table
+        query = "SELECT * FROM Warehouses"
+        cursor.execute(query)
+
+        # Fetch all rows from the query result
+        rows = cursor.fetchall()
+
+        # Return the rows
+        return rows
+
+    except pyodbc.Error as e:
+        print("Error:", e)
+        return []
+
+    finally:
+        # Ensure resources are closed
+        if 'cursor' in locals():
+            cursor.close()
+        if 'connection' in locals():
+            connection.close()
+
