@@ -99,6 +99,14 @@ These strings should be put stored in the local variables for the program to wor
 "OdbcSqlConnectionString": "Driver={ODBC Driver 18 for SQL Server};Server=distributed-systems-module-server.database.windows.net,1433;Database=TruckWarehouseMonitor;Uid=sc22r2s;Pwd=Qwertyui123_;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
 ```
 
+## System Architecture Diagram
+
+Below is the architecture diagram illustrating the workflow for monitoring truck locations and alerting through Azure Functions:
+
+![TruckWaarehouseMonitorOvervieewWhiteBackground](https://github.com/user-attachments/assets/f27b3aa3-9022-4801-866f-c6cdb2add3aa)
+
+This diagram outlines the interaction between HTTP-triggered and SQL-triggered Azure Functions, detailing the flow of data from truck location updates to alerting warehouses about nearby trucks.
+
 ## Prerequisites
 
 Before setting up the project, ensure you meet the following prerequisites:
