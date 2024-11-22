@@ -99,6 +99,20 @@ These strings should be put stored in the local variables for the program to wor
 "OdbcSqlConnectionString": "Driver={ODBC Driver 18 for SQL Server};Server=distributed-systems-module-server.database.windows.net,1433;Database=TruckWarehouseMonitor;Uid=sc22r2s;Pwd=Qwertyui123_;Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
 ```
 
+## Prerequisites
+
+Before setting up the project, ensure you meet the following prerequisites:
+
+- **Azure Account**: An active Azure subscription is required.
+- **Python Installation**: A supported version of Python for Azure Functions.
+- **Visual Studio Code**: Installed on a supported platform.
+  - Python extension for Visual Studio Code.
+  - Azure Functions extension for Visual Studio Code, version 1.8.1 or later.
+  - Azurite V3 extension for local storage emulation.
+- **Azure Functions Core Tools**: Ensure that Azure Functions Core Tools are installed or updated for local development and testing.
+
+For more detailed information on setting up your development environment, refer to the [official Microsoft documentation](https://learn.microsoft.com/en-us/azure/azure-functions/create-first-function-vs-code-python).
+
 ## Example Usage of the Project
 
 **Invoke the `uploadTruckData` Function**
