@@ -103,7 +103,7 @@ These strings should be put stored in the local variables for the program to wor
 
 Below is the architecture diagram illustrating the workflow for monitoring truck locations and alerting through Azure Functions:
 
-![TruckWaarehouseMonitorOvervieew](https://github.com/user-attachments/assets/549a93ef-782f-4aed-b6af-408409b83242)
+![TruckWaarehouseMonitorOvervieewWhiteBackground](https://github.com/user-attachments/assets/f27b3aa3-9022-4801-866f-c6cdb2add3aa)
 
 This diagram outlines the interaction between HTTP-triggered and SQL-triggered Azure Functions, detailing the flow of data from truck location updates to alerting warehouses about nearby trucks.
 
