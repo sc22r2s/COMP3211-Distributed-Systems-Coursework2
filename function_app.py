@@ -50,8 +50,7 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
     {
         "truck_id": int,
         "latitude": float,
-        "longitude": float,
-        "timestamp": str (ISO 8601 format)
+        "longitude": float
     }
 
     The data is validated and inserted into the TruckLocations table.
@@ -73,10 +72,6 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
         truck_id = int(req_body.get("truck_id"))
         latitude = float(req_body.get("latitude"))
         longitude = float(req_body.get("longitude"))
-        timestamp = req_body.get("timestamp")
-
-        # Ensure the timestamp is in a valid ISO 8601 format
-        datetime.fromisoformat(timestamp)
 
     except (ValueError, TypeError) as e:
         logging.error("Invalid data format: %s", e)
@@ -86,7 +81,7 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     # Ensure all required parameters are provided
-    if not all([truck_id, latitude, longitude, timestamp]):
+    if not all([truck_id, latitude, longitude]):
         return func.HttpResponse(
             "Missing one or more required parameters.",
             status_code=400
@@ -98,9 +93,9 @@ def upload_truck_data(req: func.HttpRequest) -> func.HttpResponse:
             with connection.cursor() as cursor:
                 query = """
                 INSERT INTO TruckLocations (TruckID, Latitude, Longitude, Timestamp)
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, GETDATE())
                 """
-                cursor.execute(query, (truck_id, latitude, longitude, timestamp))
+                cursor.execute(query, (truck_id, latitude, longitude))
                 connection.commit()
 
         logging.info("Truck location data inserted successfully.")
