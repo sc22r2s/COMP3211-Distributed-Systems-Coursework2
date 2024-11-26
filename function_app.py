@@ -17,7 +17,6 @@ Workflow:
    - HTTP-triggered function to calculate and log truck-to-warehouse distances.
 """
 
-from datetime import datetime
 import json
 import logging
 import math
@@ -197,7 +196,7 @@ def calculate_truck_data(truckInfo: str) -> None:
     # Parse the truck data from the trigger payload
     trucks = json.loads(truckInfo)
 
-    # Fetch warehouse data from the database
+    # Fetch warehouse data from the database5
     warehouses = fetch_warehouses()
 
     for truck in trucks:
